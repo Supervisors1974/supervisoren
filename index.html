@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supervisor Network Terminal</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="terminal" id="terminal">
+    <div id="output"></div>
+
+    <div class="input-line">
+      <span id="prompt">C:\></span>
+      <input
+        type="text"
+        id="commandInput"
+        autocomplete="off"
+        autofocus
+        spellcheck="false"
+      >
+    </div>
+  </div>
+<audio id="ambientSound" src="media/terminal-ambience.mp3" loop></audio>
+  <script src="script.js"></script>
+</body>
+</html>
