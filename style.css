@@ -81,4 +81,131 @@ body {
 .viewer-footer {
   margin-top: 20px;
   text-align: center;
+}/* 
+
+--------------------------------------------------
+   CAUSAL.EXE
+-------------------------------------------------- */
+
+.causal-line {
+  white-space: pre-wrap;
+}
+
+.scramble-line {
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.causal-noise {
+  opacity: 0.85;
+  letter-spacing: 1px;
+  transition: opacity 0.3s ease;
+}
+
+.causal-noise.fade-out {
+  opacity: 0;
+}
+
+
+/* Mathematische Formelmodule */
+
+.formula-box {
+  box-sizing: border-box;
+
+  max-width: 850px;
+
+  margin:
+    16px
+    0
+    20px
+    36px;
+
+  padding:
+    12px
+    18px
+    14px
+    18px;
+
+  border:
+    1px solid
+    rgba(57, 255, 20, 0.7);
+
+  background:
+    rgba(57, 255, 20, 0.035);
+
+  box-shadow:
+    0 0 10px
+    rgba(57, 255, 20, 0.15);
+
+  overflow-x: auto;
+}
+
+.formula-label {
+  margin-bottom: 8px;
+
+  font-size: 12px;
+
+  letter-spacing: 1.5px;
+
+  opacity: 0.7;
+}
+
+.formula-content {
+  font-size: 20px;
+  text-align: center;
+}
+
+
+/* MathJax soll unsere Terminalfarbe übernehmen */
+
+mjx-container {
+  color: #39ff14 !important;
+}
+
+
+/* Endresultat */
+
+.causal-result {
+  margin-top: 20px;
+
+  padding:
+    20px
+    24px;
+
+  max-width: 600px;
+
+  border:
+    1px solid
+    #39ff14;
+
+  text-align: center;
+
+  box-shadow:
+    0 0 14px
+    rgba(57, 255, 20, 0.25);
+}
+
+.causal-result-title {
+  letter-spacing: 2px;
+}
+
+.causal-low {
+  margin:
+    20px
+    0;
+
+  font-size: 42px;
+
+  font-weight: bold;
+
+  letter-spacing: 8px;
+
+  text-shadow:
+    0 0 12px
+    rgba(57, 255, 20, 0.8);
+}
+
+.causal-return {
+  margin-top: 18px;
+  opacity: 0.75;
 }

@@ -13,7 +13,9 @@ let currentPath = ["C:"];
 let mode = "command";
 
 let selectedIndex = 0;
+let causalFinished = false;
 
+const USE_IP_LOCATION = true;
 
 // ----------------------------------------------------
 // VIRTUELLES DATEISYSTEM
@@ -73,14 +75,26 @@ Classification: unrestricted`
         contents: {}
       },
 
-      "SYSTEM": {
-        type: "directory",
-        contents: {}
-      },
+"SYSTEM": {
+  type: "directory",
+  contents: {}
+},
 
-      "README.TXT": {
-        type: "file",
-        content:
+"SOFTWARE": {
+  type: "directory",
+  contents: {
+    "CAUSAL.EXE": {
+      type: "program",
+      program: "causal"
+    }
+  }
+},
+
+"README.TXT": {
+  type: "file",
+  content:
+
+        
 `SUPERVISOR INFORMATION SYSTEM
 
 Navigation is command-based.
@@ -274,6 +288,663 @@ function moveSelection(direction) {
 // AUSGEWÄHLTEN EINTRAG ÖFFNEN
 // ----------------------------------------------------
 
+// ----------------------------------------------------
+// CAUSAL.EXE
+// ----------------------------------------------------
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
+function appendCausalLine(text = "", className = "") {
+  const line = document.createElement("div");
+
+  line.className = `causal-line ${className}`.trim();
+  line.textContent = text;
+
+  output.appendChild(line);
+
+  scrollToBottom();
+
+  return line;
+}
+
+
+async function causalLine(text, delay = 700) {
+  appendCausalLine(text);
+  await sleep(delay);
+}
+
+
+function randomCharacter() {
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+    "0123456789" +
+    "#%@!?/<>[]{}" +
+    "ΔΣΩΛλμνΓ" +
+    "▓▒░";
+
+  return characters[
+    Math.floor(Math.random() * characters.length)
+  ];
+}
+
+
+function randomNoiseString(length = 46) {
+  let result = "";
+
+  for (let i = 0; i < length; i++) {
+    result += randomCharacter();
+  }
+
+  return result;
+}
+
+
+// Kurzer Block aus flimmerndem Datenrauschen
+async function noiseBurst(duration = 1200, rows = 5) {
+
+  const lines = [];
+
+  for (let i = 0; i < rows; i++) {
+    const line = appendCausalLine(
+      randomNoiseString(),
+      "causal-noise"
+    );
+
+    lines.push(line);
+  }
+
+  const start = performance.now();
+
+  while (performance.now() - start < duration) {
+
+    lines.forEach(line => {
+      line.textContent = randomNoiseString();
+    });
+
+    scrollToBottom();
+
+    await sleep(55);
+  }
+
+  lines.forEach(line => {
+    line.classList.add("fade-out");
+  });
+
+  await sleep(300);
+
+  lines.forEach(line => {
+    line.remove();
+  });
+}
+
+
+// Zufällige Zeichen stabilisieren sich zur Zielzeile
+async function scrambleLine(target, duration = 900) {
+
+  const line = appendCausalLine("", "scramble-line");
+
+  const start = performance.now();
+
+  while (true) {
+
+    const elapsed = performance.now() - start;
+
+    const progress = Math.min(
+      elapsed / duration,
+      1
+    );
+
+    const lockedCharacters =
+      Math.floor(progress * target.length);
+
+    let display = "";
+
+    for (let i = 0; i < target.length; i++) {
+
+      const realCharacter = target[i];
+
+      if (realCharacter === " ") {
+        display += " ";
+      }
+
+      else if (i < lockedCharacters) {
+        display += realCharacter;
+      }
+
+      else {
+        display += randomCharacter();
+      }
+    }
+
+    line.textContent = display;
+
+    scrollToBottom();
+
+    if (progress >= 1) {
+      line.textContent = target;
+      break;
+    }
+
+    await sleep(45);
+  }
+
+  await sleep(250);
+}
+
+
+// Formel in eigenem grünen Modul
+async function showFormula(label, latex, hold = 1700) {
+
+  const box = document.createElement("div");
+  box.className = "formula-box";
+
+  const formulaLabel = document.createElement("div");
+  formulaLabel.className = "formula-label";
+  formulaLabel.textContent = label;
+
+  const formula = document.createElement("div");
+  formula.className = "formula-content";
+
+  formula.innerHTML = `\\[${latex}\\]`;
+
+  box.appendChild(formulaLabel);
+  box.appendChild(formula);
+
+  output.appendChild(box);
+
+  scrollToBottom();
+
+  if (
+    window.MathJax &&
+    MathJax.typesetPromise
+  ) {
+    await MathJax.typesetPromise([box]);
+  }
+
+  await sleep(hold);
+}
+
+
+// Standort + Browserzeit
+async function getObserverContext() {
+
+  const browserTimeZone =
+    Intl.DateTimeFormat()
+      .resolvedOptions()
+      .timeZone || "LOCAL";
+
+  const result = {
+    city: "UNRESOLVED",
+    region: "",
+    country: "UNRESOLVED",
+    timezone: browserTimeZone
+  };
+
+  if (USE_IP_LOCATION) {
+
+    try {
+
+      const response =
+        await fetch(
+          "https://ipapi.co/json/"
+        );
+
+      if (response.ok) {
+
+        const data =
+          await response.json();
+
+        if (data.city) {
+          result.city = data.city;
+        }
+
+        if (data.region) {
+          result.region = data.region;
+        }
+
+        if (data.country_name) {
+          result.country =
+            data.country_name;
+        }
+      }
+
+    }
+
+    catch (error) {
+
+      console.log(
+        "Regional node unresolved:",
+        error
+      );
+    }
+  }
+
+  return result;
+}
+
+
+function getCurrentLocalTime() {
+
+  return new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    }
+  ).format(new Date());
+}
+
+
+// Hauptsequenz
+async function runCausalEntropy() {
+
+  mode = "program";
+  causalFinished = false;
+
+  inputLine.style.display = "none";
+  output.textContent = "";
+
+  // Standort schon parallel abfragen
+  const observerPromise =
+    getObserverContext();
+
+
+  await scrambleLine(
+    "CAUSAL.EXE / VORONOV CAUSAL ANALYSIS MODULE",
+    1100
+  );
+
+  await causalLine(
+    "SUPERVISOR ANALYTICAL SYSTEM",
+    600
+  );
+
+  await causalLine(
+    "BUILD 4.17 / TEMPORAL ANALYSIS BRANCH",
+    600
+  );
+
+  await causalLine("", 300);
+
+  await causalLine(
+    "INITIALIZING...",
+    700
+  );
+
+
+  // ------------------------------------------------
+  // SYMBOLMODUL
+  // ------------------------------------------------
+
+  await noiseBurst(1200, 5);
+
+  await scrambleLine(
+    "LOADING EXTENDED SYMBOL MODULE..............OK",
+    1000
+  );
+
+  await causalLine(
+    "MATHEMATICAL DISPLAY LAYER..................ACTIVE",
+    600
+  );
+
+
+  // ------------------------------------------------
+  // RAUMZEIT
+  // ------------------------------------------------
+
+  await causalLine(
+    "INITIALIZING LOCAL SPACETIME METRIC...",
+    650
+  );
+
+  await showFormula(
+    "MINKOWSKI INTERVAL",
+    String.raw`
+      ds^2 =
+      c^2dt^2 -
+      dx^2 -
+      dy^2 -
+      dz^2
+    `,
+    1700
+  );
+
+  await showFormula(
+    "EINSTEIN FIELD EQUATION",
+    String.raw`
+      R_{\mu\nu}
+      -
+      \frac{1}{2}R g_{\mu\nu}
+      +
+      \Lambda g_{\mu\nu}
+      =
+      \frac{8\pi G}{c^4}
+      T_{\mu\nu}
+    `,
+    1900
+  );
+
+  await causalLine(
+    "SPACETIME GEOMETRY.........................RESOLVED",
+    650
+  );
+
+  await causalLine(
+    "LOCAL LIGHT CONE...........................RESOLVED",
+    650
+  );
+
+
+  // ------------------------------------------------
+  // TRAJEKTORIEN
+  // ------------------------------------------------
+
+  await noiseBurst(900, 4);
+
+  await scrambleLine(
+    "CALCULATING ACCESSIBLE WORLDLINES...",
+    900
+  );
+
+  await showFormula(
+    "GEODESIC PROPAGATION",
+    String.raw`
+      \frac{d^2x^\mu}{d\tau^2}
+      +
+      \Gamma^\mu_{\alpha\beta}
+      \frac{dx^\alpha}{d\tau}
+      \frac{dx^\beta}{d\tau}
+      =
+      0
+    `,
+    1600
+  );
+
+
+  for (let i = 1; i <= 8; i++) {
+
+    const pass =
+      String(i).padStart(2, "0");
+
+    await causalLine(
+      `WORLDLINE PASS ${pass} / 08`,
+      430
+    );
+  }
+
+
+  await causalLine(
+    "CAUSAL ENSEMBLE............................ACQUIRED",
+    600
+  );
+
+
+  // ------------------------------------------------
+  // VORONOV-FORMALISMUS
+  // ------------------------------------------------
+
+  await noiseBurst(900, 5);
+
+  await scrambleLine(
+    "INITIALIZING VORONOV FORMALISM...",
+    1000
+  );
+
+  await showFormula(
+    "FINITE-TIME CAUSAL DIVERGENCE",
+    String.raw`
+      \lambda_i^{(T)}(x)
+      =
+      \frac{1}{T}
+      \ln
+      \left(
+      \frac{
+        \|\delta X_i(T)\|
+      }{
+        \|\delta X_i(0)\|
+      }
+      \right)
+    `,
+    1800
+  );
+
+  await showFormula(
+    "VORONOV ENTROPY",
+    String.raw`
+      S_V(x,T)
+      =
+      k_V
+      \sum_i
+      \max
+      \left(
+        0,
+        \lambda_i^{(T)}(x)
+      \right)
+    `,
+    2000
+  );
+
+  await showFormula(
+    "CAUSAL VORTICITY",
+    String.raw`
+      \boldsymbol{\omega}_C
+      =
+      \nabla
+      \times
+      \mathbf{u}_C
+    `,
+    1500
+  );
+
+  await showFormula(
+    "VORONOV–NAVIER–STOKES PROPAGATION",
+    String.raw`
+      \frac{
+        \partial \mathbf{u}_C
+      }{
+        \partial t
+      }
+      +
+      (\mathbf{u}_C
+      \cdot
+      \nabla)
+      \mathbf{u}_C
+      =
+      -
+      \nabla \Pi_C
+      +
+      \nu_C
+      \nabla^2
+      \mathbf{u}_C
+      +
+      \mathbf{F}_C
+    `,
+    2100
+  );
+
+
+  // ------------------------------------------------
+  // BERECHNUNG
+  // ------------------------------------------------
+
+  await causalLine(
+    "INTEGRATING FUTURE EVENT CONE...............OK",
+    650
+  );
+
+  await causalLine(
+    "NORMALIZING PATH WEIGHTS....................OK",
+    650
+  );
+
+  await causalLine(
+    "CALCULATING RECONVERGENCE FIELD.............OK",
+    650
+  );
+
+  await causalLine(
+    "CALCULATING CAUSAL VORTICITY................OK",
+    650
+  );
+
+  await causalLine(
+    "SEARCHING FOR LOCAL SHEAR ZONES.............NONE",
+    650
+  );
+
+
+  // ------------------------------------------------
+  // BEOBACHTER
+  // ------------------------------------------------
+
+  await noiseBurst(700, 3);
+
+  await scrambleLine(
+    "IDENTIFYING LOCAL OBSERVER...",
+    900
+  );
+
+  const observer =
+    await observerPromise;
+
+  await causalLine(
+    "OBSERVER CLASSIFICATION: EXTERNAL",
+    600
+  );
+
+  await causalLine(
+    `REGIONAL NODE: ${observer.city.toUpperCase()}, ${observer.country.toUpperCase()}`,
+    650
+  );
+
+  if (observer.region) {
+
+    await causalLine(
+      `REGIONAL SUBNODE: ${observer.region.toUpperCase()}`,
+      550
+    );
+  }
+
+  await causalLine(
+    `LOCAL TIME: ${getCurrentLocalTime()}`,
+    650
+  );
+
+  await causalLine(
+    `TIME ZONE: ${observer.timezone.toUpperCase()}`,
+    650
+  );
+
+
+  // ------------------------------------------------
+  // INTERVENTIONSINDEX
+  // ------------------------------------------------
+
+  await showFormula(
+    "LOCAL INTERVENTION INDEX",
+    String.raw`
+      \mathcal{I}(x)
+      =
+      \sqrt{
+        \left|
+        g^{\mu\nu}
+        \nabla_\mu S_V
+        \nabla_\nu S_V
+        \right|
+      }
+    `,
+    1800
+  );
+
+
+  await causalLine(
+    "LOCAL CAUSAL DENSITY..............0.018431",
+    550
+  );
+
+  await causalLine(
+    "PATH DIVERGENCE...................0.002119",
+    550
+  );
+
+  await causalLine(
+    "CAUSAL VORTICITY..................0.000071",
+    550
+  );
+
+  await causalLine(
+    "RECONVERGENCE INDEX...............0.984017",
+    550
+  );
+
+  await causalLine(
+    "INTERVENTION INDEX................0.013842",
+    650
+  );
+
+
+  await causalLine("", 400);
+
+  await scrambleLine(
+    "[████████████████████████████] 100%",
+    900
+  );
+
+  await sleep(1200);
+
+
+  // ------------------------------------------------
+  // RESULTAT
+  // ------------------------------------------------
+
+  const result =
+    document.createElement("div");
+
+  result.className =
+    "causal-result";
+
+  result.innerHTML = `
+    <div class="causal-result-title">
+      CAUSAL ENTROPY STATUS
+    </div>
+
+    <div class="causal-low">
+      LOW
+    </div>
+
+    <div>
+      EVENT CONE: STABLE<br>
+      RECONVERGENCE: HIGH<br>
+      SUPERVISION STATUS: PASSIVE
+    </div>
+
+    <br>
+
+    <div>
+      NO INTERVENTION REQUIRED.
+    </div>
+  `;
+
+  output.appendChild(result);
+
+  scrollToBottom();
+
+  await sleep(600);
+
+  appendCausalLine(
+    "ESC - RETURN TO DIRECTORY",
+    "causal-return"
+  );
+
+  causalFinished = true;
+}
+
 function openSelectedItem() {
   const items = getBrowserItems();
 
@@ -302,6 +973,14 @@ function openSelectedItem() {
     return;
   }
 
+if (
+  target.type === "program" &&
+  target.program === "causal"
+) {
+  runCausalEntropy();
+  return;
+}
+  
   // Bild
   if (target.type === "image") {
     openImageViewer(selectedName, target);
@@ -538,7 +1217,26 @@ function executeCommand(rawCommand) {
 // ----------------------------------------------------
 
 document.addEventListener("keydown", event => {
+if (mode === "program") {
 
+  if (
+    event.key === "Escape" &&
+    causalFinished
+  ) {
+
+    event.preventDefault();
+
+    mode = "browser";
+
+    renderBrowser();
+
+    return;
+  }
+
+  // Während der Berechnung keine anderen
+  // Tastatureingaben verarbeiten.
+  return;
+}
   // BROWSERMODUS
   if (mode === "browser") {
 
